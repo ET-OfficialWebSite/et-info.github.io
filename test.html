@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>2周年オープニング</title>
+
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin: 0;
+  background: #00FF00;
+  overflow: hidden;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+canvas {
+  display: block;
+}
+
+#thanks {
+  position: absolute;
+  bottom: 20%;
+  width: 100%;
+  text-align: center;
+  font-size: 48px;
+  font-weight: bold;
+  color: black;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+.show {
+  opacity: 1;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="thanks">【2周年ありがとう】</div>
+
+<!-- opentype.js -->
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@latest/dist/opentype.min.js"></script>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const text = "地震 / 気象 / 交通情報\n共有オープンチャット";
+
+/* フォント読み込み（GoogleフォントURL） */
+const fontURL = "https://fonts.gstatic.com/s/notosansjp/v52/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFJE.woff";
+
+opentype.load(fontURL, function(err, font) {
+  if (err) {
+    alert("フォント読み込み失敗");
+    return;
+  }
+
+  const fontSize = 80;
+  const path = font.getPath(text, 50, canvas.height / 2, fontSize);
+
+  const commands = path.commands;
+  const segments = [];
+
+  /* パス → 線分化 */
+  let prev = null;
+  commands.forEach(cmd => {
+    if (cmd.type === "M") {
+      prev = {x: cmd.x, y: cmd.y};
+    } else if (cmd.type === "L") {
+      segments.push({
+        x1: prev.x,
+        y1: prev.y,
+        x2: cmd.x,
+        y2: cmd.y
+      });
+      prev = {x: cmd.x, y: cmd.y};
+    } else if (cmd.type === "Q" || cmd.type === "C") {
+      /* 曲線も細かく分割 */
+      const steps = 10;
+      for (let i = 0; i < steps; i++) {
+        const t = i / steps;
+        const x = prev.x + (cmd.x - prev.x) * t;
+        const y = prev.y + (cmd.y - prev.y) * t;
+
+        segments.push({
+          x1: prev.x,
+          y1: prev.y,
+          x2: x,
+          y2: y
+        });
+
+        prev = {x, y};
+      }
+    }
+  });
+
+  /* 各線分をバラバラに */
+  segments.forEach(s => {
+    s.dx = Math.random() * canvas.width;
+    s.dy = Math.random() * canvas.height;
+  });
+
+  let progress = 0;
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    segments.forEach((s, i) => {
+      const t = Math.min(progress / 100, 1);
+
+      const x1 = s.dx + (s.x1 - s.dx) * t;
+      const y1 = s.dy + (s.y1 - s.dy) * t;
+      const x2 = s.dx + (s.x2 - s.dx) * t;
+      const y2 = s.dy + (s.y2 - s.dy) * t;
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
+
+    progress += 1.5;
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+
+  /* ありがとう */
+  setTimeout(() => {
+    document.getElementById("thanks").classList.add("show");
+  }, 4000);
+});
+</script>
+
+</body>
+</html>
